@@ -1,0 +1,9 @@
+[phases.setup]
+nixPkgs = ["jdk17", "maven"]
+
+[phases.install]
+cmds = ["./mvnw clean package -DskipTests"]
+
+[start]
+cmd = "java -jar target/*.jar"
+
