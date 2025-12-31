@@ -3,10 +3,10 @@ nixPkgs = ["jdk17", "maven"]
 
 [phases.install]
 cmds = [
-  "chmod +x ./mvnw",
-  "./mvnw clean package -DskipTests"
+  "chmod +x ./mvnw || true",
+  "./mvnw clean package -DskipTests || mvn clean package -DskipTests"
 ]
 
 [start]
-cmd = "java -jar target/analytics-dashboard-1.0.0.jar"
+cmd = "sh -c 'JAR_FILE=$(find target -name \"*.jar\" -not -name \"*-sources.jar\" -not -name \"*-javadoc.jar\" | head -1) && java -jar \"$JAR_FILE\"'"
 
