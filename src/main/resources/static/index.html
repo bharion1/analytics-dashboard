@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Analytics - Portfolio</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="styles.css?v=2">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div>
+                    <h1>Dashboard Analytics</h1>
+                    <p class="subtitle">Visualização interativa de métricas em tempo real</p>
+                </div>
+                <div id="authSection" style="display: none;">
+                    <span id="userInfo" style="color: var(--gold-color); margin-right: 15px;"></span>
+                    <button id="logoutBtn" class="btn-logout">Sair</button>
+                </div>
+                <button id="loginBtn" class="btn-login">Login</button>
+            </div>
+        </header>
+
+        <!-- Modal de Login -->
+        <div id="loginModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2>Login</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="loginUsername">Usuário</label>
+                        <input type="text" id="loginUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Senha</label>
+                        <input type="password" id="loginPassword" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Entrar</button>
+                </form>
+                <p style="margin-top: 15px; color: #cccccc;">
+                    Usuários de teste: admin/admin123 ou user/user123
+                </p>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon"></div>
+                <div class="stat-content">
+                    <h3 id="totalMetrics">0</h3>
+                    <p>Total de Métricas</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"></div>
+                <div class="stat-content">
+                    <h3 id="averageValue">0</h3>
+                    <p>Média Geral</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"></div>
+                <div class="stat-content">
+                    <h3 id="topCategory">-</h3>
+                    <p>Categoria Top</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon"></div>
+                <div class="stat-content">
+                    <h3 id="totalValue">0</h3>
+                    <p>Valor Total</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h2>Distribuição por Categoria</h2>
+                <canvas id="categoryChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h2>Série Temporal (24h)</h2>
+                <canvas id="timeSeriesChart"></canvas>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h2>Top 5 Métricas</h2>
+                <canvas id="topMetricsChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h2>Totais por Categoria</h2>
+                <canvas id="categoryTotalsChart"></canvas>
+            </div>
+        </div>
+
+        <div class="metrics-table-section">
+            <div class="table-header">
+                <h2>Métricas Recentes</h2>
+                <div class="table-actions">
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="Buscar métricas..." oninput="handleSearch()">
+                        <span class="search-icon">⌕</span>
+                    </div>
+                    <div>
+                        <button onclick="exportToExcel()" class="btn-export">Exportar Excel</button>
+                        <button onclick="exportToPdf()" class="btn-export">Exportar PDF</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Filtros -->
+            <div class="filters-section">
+                <h3>Filtros</h3>
+                <div class="filters-grid">
+                    <div class="form-group">
+                        <label for="filterCategory">Categoria</label>
+                        <select id="filterCategory">
+                            <option value="">Todas</option>
+                            <option value="Vendas">Vendas</option>
+                            <option value="Marketing">Marketing</option>
+                            <option value="Suporte">Suporte</option>
+                            <option value="Desenvolvimento">Desenvolvimento</option>
+                            <option value="Financeiro">Financeiro</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="filterMinValue">Valor Mínimo</label>
+                        <input type="number" id="filterMinValue" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="filterMaxValue">Valor Máximo</label>
+                        <input type="number" id="filterMaxValue" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="filterStartDate">Data Inicial</label>
+                        <input type="date" id="filterStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label for="filterEndDate">Data Final</label>
+                        <input type="date" id="filterEndDate">
+                    </div>
+                    <div class="form-group" style="display: flex; align-items: flex-end;">
+                        <button onclick="applyFilters()" class="btn-filter">Aplicar Filtros</button>
+                        <button onclick="clearFilters()" class="btn-filter" style="margin-left: 10px; background: var(--bg-tertiary); color: var(--text-secondary); border: 1px solid var(--border-color);">Limpar</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Loading State -->
+            <div id="tableLoading" class="loading-container">
+                <div class="spinner"></div>
+                <p>Carregando métricas...</p>
+            </div>
+            
+            <div class="table-container" id="tableContainer" style="display: none;">
+                <table id="metricsTable">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Categoria</th>
+                            <th>Valor</th>
+                            <th>Data/Hora</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="metricsTableBody">
+                    </tbody>
+                </table>
+                
+                <!-- Paginação -->
+                <div class="pagination-container">
+                    <div class="pagination-info">
+                        <span id="paginationInfo">Mostrando 0 - 0 de 0</span>
+                    </div>
+                    <div class="pagination-controls">
+                        <button id="prevPage" class="btn-pagination" onclick="changePage(-1)" disabled>Anterior</button>
+                        <span id="pageNumbers" class="page-numbers"></span>
+                        <button id="nextPage" class="btn-pagination" onclick="changePage(1)" disabled>Próxima</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="add-metric-section">
+            <h2>Adicionar Nova Métrica</h2>
+            <form id="metricForm" class="metric-form" novalidate>
+                <div class="form-group">
+                    <label for="name">Nome da Métrica <span class="required">*</span></label>
+                    <input type="text" id="name" name="name" required minlength="3" maxlength="100">
+                    <span class="error-message" id="nameError"></span>
+                </div>
+                <div class="form-group">
+                    <label for="category">Categoria <span class="required">*</span></label>
+                    <select id="category" name="category" required>
+                        <option value="">Selecione...</option>
+                        <option value="Vendas">Vendas</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Suporte">Suporte</option>
+                        <option value="Desenvolvimento">Desenvolvimento</option>
+                        <option value="Financeiro">Financeiro</option>
+                    </select>
+                    <span class="error-message" id="categoryError"></span>
+                </div>
+                <div class="form-group">
+                    <label for="value">Valor <span class="required">*</span></label>
+                    <input type="number" id="value" name="value" step="0.01" required min="0">
+                    <span class="error-message" id="valueError"></span>
+                </div>
+                <div class="form-group">
+                    <label for="color">Cor (hex)</label>
+                    <input type="color" id="color" name="color" value="#4A90E2">
+                </div>
+                <div class="form-group">
+                    <label for="description">Descrição</label>
+                    <textarea id="description" name="description" rows="3" maxlength="500"></textarea>
+                    <span class="char-count"><span id="descriptionCount">0</span>/500</span>
+                </div>
+                <button type="submit" class="btn-primary" id="submitBtn">
+                    <span class="btn-text">Adicionar Métrica</span>
+                    <span class="btn-loader" style="display: none;"></span>
+                </button>
+            </form>
+        </div>
+        
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+            <div class="loading-spinner-large">
+                <div class="spinner"></div>
+                <p>Processando...</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
